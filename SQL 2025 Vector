@@ -1,0 +1,133 @@
+Example: Storing and Querying Vectors in SQL Server 2025
+1. Create a Table with a Vector Column
+SQL Server 2025 adds a VECTOR data type. You specify the dimension (e.g., 1536 for OpenAI embeddings).
+
+
+CREATE TABLE Documents (
+    Id INT PRIMARY KEY,
+    Title NVARCHAR(200),
+    Content NVARCHAR(MAX),
+    Embedding VECTOR(1536)  -- store a 1536-dimensional vector
+);
+
+
+2. Insert Data with Embeddings
+You can insert embeddings (arrays of floats) directly into the vector column.
+
+INSERT INTO Documents (Id, Title, Content, Embedding)
+VALUES (
+    1,
+    'AI Basics',
+    'Introduction to artificial intelligence concepts.',
+    VECTOR[0.0123, 0.2345, 0.5432, ...]  -- truncated example
+);
+
+
+Perform a Similarity Search
+SQL Server 2025 provides functions like DOT_PRODUCT or COSINE_DISTANCE for vector similarity.
+
+DECLARE @queryEmbedding VECTOR(1536) = VECTOR[0.0111, 0.2222, 0.3333, ...];
+
+SELECT TOP 5 Id, Title, DOT_PRODUCT(Embedding, @queryEmbedding) AS Score
+FROM Documents
+ORDER BY Score DESC;
+
+
+4. Create a Vector Index (Optional for Performance)
+You can create a vector index to accelerate similarity searches:
+
+CREATE VECTOR INDEX idx_embedding
+ON Documents (Embedding)
+WITH (DISTANCE = COSINE);
+
+
+===============================================
+
+Got it 👍 — you want to take files or data from your local drive, generate embeddings, and load them into a **SQL Server 2025 embedding database** (or Supabase with pgvector). Let’s break it down step by step:
+
+---
+
+## 🛠️ Workflow Overview
+1. **Prepare your data**  
+   - Collect documents (e.g., `.txt`, `.pdf`, `.csv`) from your local drive.  
+   - Clean/normalize text (remove formatting, split into chunks if large).  
+
+2. **Generate embeddings**  
+   - Use an embedding model (e.g., OpenAI, Azure AI, Hugging Face).  
+   - Each chunk of text → embedding vector (array of floats).  
+
+3. **Connect to SQL Server 2025**  
+   - Use tools like **SQL Server Management Studio (SSMS)**, **Azure Data Studio**, or programmatically via Python/Node.js.  
+   - Ensure your table has a **VECTOR column** (e.g., `VECTOR(1536)` for OpenAI embeddings).  
+
+4. **Insert embeddings into SQL Server**  
+   - Store metadata (document ID, title, chunk text) + embedding vector.  
+
+---
+
+## 📝 Example in SQL Server 2025
+
+### 1. Create a Table
+```sql
+CREATE TABLE Documents (
+    Id INT PRIMARY KEY IDENTITY,
+    FileName NVARCHAR(200),
+    ChunkText NVARCHAR(MAX),
+    Embedding VECTOR(1536)  -- vector column
+);
+```
+
+### 2. Python Script to Load Local Files
+```python
+import os
+import openai
+import pyodbc
+
+# Connect to SQL Server
+conn = pyodbc.connect("Driver={ODBC Driver 18 for SQL Server};Server=localhost;Database=MyDB;Trusted_Connection=yes;")
+cursor = conn.cursor()
+
+# Loop through local files
+for file in os.listdir("C:/mydocs"):
+    with open(os.path.join("C:/mydocs", file), "r", encoding="utf-8") as f:
+        text = f.read()
+
+    # Generate embedding (example with OpenAI)
+    response = openai.Embedding.create(
+        model="text-embedding-3-large",
+        input=text
+    )
+    embedding = response['data'][0]['embedding']
+
+    # Insert into SQL Server
+    cursor.execute("""
+        INSERT INTO Documents (FileName, ChunkText, Embedding)
+        VALUES (?, ?, VECTOR(?))
+    """, file, text, embedding)
+
+conn.commit()
+```
+
+---
+
+## 🔍 Querying Later
+Once loaded, you can run similarity searches:
+
+```sql
+DECLARE @queryEmbedding VECTOR(1536) = VECTOR[0.0111, 0.2222, 0.3333, ...];
+
+SELECT TOP 5 FileName, ChunkText, COSINE_DISTANCE(Embedding, @queryEmbedding) AS Score
+FROM Documents
+ORDER BY Score ASC;
+```
+
+---
+
+## ⚖️ Key Takeaway
+- **Supabase (pgvector):** Similar process, but you’d use `pgvector` type and insert embeddings via SQLAlchemy or psycopg2.  
+- **SQL Server 2025:** Now supports **VECTOR columns + similarity functions**, so you can directly store and query embeddings.  
+- **n8n integration:** You could automate this pipeline (local file → embedding → SQL insert) using n8n nodes for file reading, API calls, and MSSQL queries.  
+
+---
+
+👉 Do you want me to show you the **Supabase (pgvector) version** of this workflow too, so you can compare how it looks against SQL Server 2025?
