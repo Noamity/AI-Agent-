@@ -1,0 +1,92 @@
+You can install Qdrant locally with Docker in just a few commands. Here’s the clean, correct setup.
+
+
+1. Pull the Qdrant Docker image
+docker pull qdrant/qdrant
+
+
+2. Run Qdrant locally
+
+The simplest way:
+
+docker run -p 6333:6333 -p 6334:6334 qdrant/qdrant
+
+This starts Qdrant with:
+
+REST API on port 6333
+
+gRPC API on port 6334
+
+After starting, you can visit:
+👉 http://localhost:6333/dashboard
+
+to access the Qdrant web UI.
+
+(Recommended) Run Qdrant with persistent storage
+
+Otherwise, your data disappears when the container stops.
+
+docker run -p 6333:6333 -p 6334:6334 \
+  -v $(pwd)/qdrant_storage:/qdrant/storage \
+  qdrant/qdrant
+
+
+This maps a local folder ./qdrant_storage to Qdrant’s internal storage path.
+
+4. Test your Qdrant instance
+curl http://localhost:6333/collections
+
+
+You should get a JSON response like:
+
+{"collections": []}
+
+. Use Qdrant from Python
+
+Install the client:
+
+pip install qdrant-client
+
+
+Connect:
+
+from qdrant_client import QdrantClient
+
+client = QdrantClient("http://localhost:6333")
+
+
+Create a collection example:
+
+client.recreate_collection(
+    collection_name="my_vectors",
+    vectors_config={
+        "size": 1536,   # embedding dimension
+        "distance": "Cosine"
+    }
+)
+
+
+Insert vectors:
+
+client.upsert(
+    collection_name="my_vectors",
+    points=[
+        {
+            "id": 1,
+            "vector": [0.1, 0.2, ...],
+            "payload": {"text": "hello world"}
+        }
+    ]
+)
+
+🚀 You’re done — Qdrant is now running locally
+
+If you'd like, I can also show you how to:
+
+✅ Connect LangChain / LlamaIndex to Qdrant
+✅ Set up Qdrant in Docker Compose
+✅ Use Qdrant for RAG + embeddings
+✅ Benchmark vs Chroma or Pinecone
+
+Just tell me what you want next.
+
